@@ -12,6 +12,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { useDraggable } from "@dnd-kit/core";
 import ImageCompressor from "image-compressor.js";
 import { FiPaperclip, FiImage, FiX, FiChevronLeft, FiChevronRight, FiEdit2 } from "react-icons/fi";
+import { Hourglass } from "lucide-react";
 import { db } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
 import tasksData from "./task.js";
@@ -29,6 +30,8 @@ import {
   limit,
   where,
   getDocs,
+  writeBatch,
+  where,
 } from "firebase/firestore";
 import EditTaskModal from "./EditTaskModal";
 
@@ -444,7 +447,37 @@ const TaskCard = ({ task, getRoleDisplay, getRoleColor, handleDelete, moveTask, 
           👤 {getRoleDisplay(task.role)}
         </div>
       )}
-      {getActionButtons(task.status, task, onEditTask)}
+      <div className="flex items-center justify-between mt-1">
+        {getActionButtons(task.status, task, onEditTask)}
+        {task.dueDate && (() => {
+          const due = parseDate(task.dueDate);
+          if (!due) return null;
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          due.setHours(0, 0, 0, 0);
+          const diffTime = due - today;
+          const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          let colorClass = "text-green-600";
+          let text = `${days} days left`;
+          
+          if (days < 0) {
+            colorClass = "text-red-500";
+            text = `Overdue by ${Math.abs(days)} days`;
+          } else if (days === 0) {
+            colorClass = "text-orange-500";
+            text = "Due Today";
+          } else if (days <= 3) {
+            colorClass = "text-orange-500";
+          }
+  
+          return (
+            <div className={`text-xs font-medium ${colorClass} flex items-center gap-1`}>
+              <span><Hourglass size={12}/></span> {text}
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 };
@@ -922,7 +955,7 @@ const TaskManager = ({ onBack }) => {
   const [countdown, setCountdown] = useState(0);
   const [noMoreCount, setNoMoreCount] = useState(0);
   const [noMoreTasks, setNoMoreTasks] = useState(false);
-  const [showNoMorePopup, setShowNoMorePopup] = useState(false);
+  const [showNoMorePopup, showImportModal, setShowNoMorePopup] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(() => {
     const now = new Date();
     const day = now.getDay();
@@ -1127,9 +1160,19 @@ const TaskManager = ({ onBack }) => {
               setButtonDisabled(true);
               setCountdown(10);
             }
+          } else {
+             // New tasks count is 0 AND we haven't reached the limit.
+             // This means we have fetched all available tasks.
+             if (loadMoreTimeoutRef.current) {
+              clearTimeout(loadMoreTimeoutRef.current);
+              loadMoreTimeoutRef.current = null;
+            }
+            setLoadingMore(false);
+            setNoMoreTasks(true);
+            setToastMessage("All available tasks have been loaded.");
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 3000);
           }
-          // If newTasksCount === 0 and tasksData.length < currentLimit,
-          // it means the data is still loading, so we don't do anything yet
         }
       },
       (error) => {
@@ -1189,7 +1232,7 @@ const TaskManager = ({ onBack }) => {
     return () => {
       unsubscribeTasks();
     };
-  }, [user?.uid, user?.displayName, refreshTrigger, currentLimit, currentView]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.uid, user?.displayName, refreshTrigger, currentLimit, currentView, filters.user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (countdown > 0) {
@@ -2181,41 +2224,7 @@ const TaskManager = ({ onBack }) => {
         </div>
       )}
 
-      {showNoMorePopup && (
-        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl border border-gray-100 max-w-xs w-full mx-auto">
-            <div className="p-6 text-center">
-              <div className="w-12 h-12 bg-linear-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  ></path>
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                No More Tasks
-              </h3>
-              <p className="text-gray-600 text-xs">
-                All available tasks have been loaded.
-              </p>
-              <button
-                onClick={() => setShowNoMorePopup(false)}
-                className="mt-4 px-4 py-2 bg-orange-500 text-white text-sm rounded-lg hover:bg-orange-600 transition-colors"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {showToast && (
         <div className="fixed bottom-4 left-4 z-50">
