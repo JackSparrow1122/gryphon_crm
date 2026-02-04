@@ -28,6 +28,7 @@ import {
   query,
   orderBy,
   limit,
+  where,
   getDocs,
   writeBatch,
   where,
@@ -1043,7 +1044,8 @@ const TaskManager = ({ onBack }) => {
         userName &&
         parsedAssignees.includes(userName) &&
         user?.role !== "Director" &&
-        user?.role !== "Head"
+        user?.role !== "Head" &&
+        user?.role !== "Admin"
       ) {
         setFilters((prev) => ({ ...prev, user: userName }));
       }
@@ -1051,24 +1053,21 @@ const TaskManager = ({ onBack }) => {
 
     // Set up limited real-time listener for tasks
     const calendarLimit = currentView === "calendar" ? 500 : currentLimit;
-    
-    let qConstraints = [
-      orderBy("createdAt", "desc"),
-      limit(calendarLimit)
-    ];
-
-    if (filters.user) {
-      qConstraints = [
-        where("assignedTo", "==", filters.user),
+    let tasksQuery;
+    if (user?.role === "Director" || user?.role === "Head" || user?.role === "Admin") {
+      tasksQuery = query(
+        collection(db, "marketing_tasks"),
         orderBy("createdAt", "desc"),
-        limit(calendarLimit)
-      ];
+        limit(calendarLimit),
+      );
+    } else {
+      tasksQuery = query(
+        collection(db, "marketing_tasks"),
+        where("userId", "==", user?.uid),
+        orderBy("createdAt", "desc"),
+        limit(calendarLimit),
+      );
     }
-
-    const tasksQuery = query(
-      collection(db, "marketing_tasks"),
-      ...qConstraints
-    );
     const unsubscribeTasks = onSnapshot(
       tasksQuery,
       (snapshot) => {
@@ -1216,7 +1215,8 @@ const TaskManager = ({ onBack }) => {
           userName &&
           dmUsers.includes(userName) &&
           user?.role !== "Director" &&
-          user?.role !== "Head"
+          user?.role !== "Head" &&
+          user?.role !== "Admin"
         ) {
           setFilters((prev) => ({ ...prev, user: userName }));
         }
