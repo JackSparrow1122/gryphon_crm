@@ -27,6 +27,7 @@ import {
   query,
   orderBy,
   limit,
+  where,
   getDocs,
 } from "firebase/firestore";
 import EditTaskModal from "./EditTaskModal";
@@ -1010,7 +1011,8 @@ const TaskManager = ({ onBack }) => {
         userName &&
         parsedAssignees.includes(userName) &&
         user?.role !== "Director" &&
-        user?.role !== "Head"
+        user?.role !== "Head" &&
+        user?.role !== "Admin"
       ) {
         setFilters((prev) => ({ ...prev, user: userName }));
       }
@@ -1018,11 +1020,21 @@ const TaskManager = ({ onBack }) => {
 
     // Set up limited real-time listener for tasks
     const calendarLimit = currentView === "calendar" ? 500 : currentLimit;
-    const tasksQuery = query(
-      collection(db, "marketing_tasks"),
-      orderBy("createdAt", "desc"),
-      limit(calendarLimit),
-    );
+    let tasksQuery;
+    if (user?.role === "Director" || user?.role === "Head" || user?.role === "Admin") {
+      tasksQuery = query(
+        collection(db, "marketing_tasks"),
+        orderBy("createdAt", "desc"),
+        limit(calendarLimit),
+      );
+    } else {
+      tasksQuery = query(
+        collection(db, "marketing_tasks"),
+        where("userId", "==", user?.uid),
+        orderBy("createdAt", "desc"),
+        limit(calendarLimit),
+      );
+    }
     const unsubscribeTasks = onSnapshot(
       tasksQuery,
       (snapshot) => {
@@ -1160,7 +1172,8 @@ const TaskManager = ({ onBack }) => {
           userName &&
           dmUsers.includes(userName) &&
           user?.role !== "Director" &&
-          user?.role !== "Head"
+          user?.role !== "Head" &&
+          user?.role !== "Admin"
         ) {
           setFilters((prev) => ({ ...prev, user: userName }));
         }
