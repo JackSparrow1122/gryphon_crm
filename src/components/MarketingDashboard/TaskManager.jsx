@@ -31,7 +31,6 @@ import {
   limit,
   getDocs,
   where,
-  writeBatch,
 } from "firebase/firestore";
 import EditTaskModal from "./EditTaskModal";
 
