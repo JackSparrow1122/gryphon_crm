@@ -11,7 +11,7 @@ import {
 import { useDroppable } from "@dnd-kit/core";
 import { useDraggable } from "@dnd-kit/core";
 import ImageCompressor from "image-compressor.js";
-import { FiPaperclip, FiImage, FiX, FiChevronLeft, FiChevronRight, FiEdit2 } from "react-icons/fi";
+import { FiPaperclip, FiImage, FiX, FiChevronLeft, FiChevronRight, FiEdit2, FiRefreshCw, FiAlertCircle } from "react-icons/fi";
 import { Hourglass } from "lucide-react";
 import { db } from "../../firebase";
 import { useAuth } from "../../context/AuthContext";
@@ -24,12 +24,13 @@ import {
   updateDoc,
   deleteDoc,
   setDoc,
+  addDoc,
   runTransaction,
   query,
   orderBy,
   limit,
-  where,
   getDocs,
+  where,
   writeBatch,
 } from "firebase/firestore";
 import EditTaskModal from "./EditTaskModal";
@@ -176,7 +177,7 @@ const TableSkeleton = () => (
   </div>
 );
 
-const TaskCard = ({ task, getRoleDisplay, getRoleColor, handleDelete, moveTask, onImageDelete, onEditTask, isDraggable = true }) => {
+const TaskCard = ({ task, getRoleDisplay, getRoleColor, handleDelete, moveTask, onImageDelete, onEditTask, isDraggable = true, user }) => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -247,7 +248,7 @@ const TaskCard = ({ task, getRoleDisplay, getRoleColor, handleDelete, moveTask, 
     }
   };
 
-  const getActionButtons = (status, task, onEditTask) => {
+  const getActionButtons = (status, task, onEditTask, user) => {
     const editButton = (
       <button
         onClick={() => onEditTask(task)}
@@ -262,73 +263,89 @@ const TaskCard = ({ task, getRoleDisplay, getRoleColor, handleDelete, moveTask, 
       case "not_started":
         return (
           <div className="flex gap-2">
-            <button
-              onClick={() => moveTask(task.id, "in_progress")}
-              className="px-2 py-1 text-xs bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors font-medium shadow-sm"
-            >
-              Start
-            </button>
-            <button
-              onClick={() => moveTask(task.id, "cancelled")}
-              className="px-2 py-1 text-xs bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors font-medium shadow-sm"
-            >
-              Cancel
-            </button>
-            {editButton}
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
+              <button
+                onClick={() => moveTask(task.id, "in_progress")}
+                className="px-2 py-1 text-xs bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors font-medium shadow-sm"
+              >
+                Start
+              </button>
+            ) }
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
+              <button
+                onClick={() => moveTask(task.id, "cancelled")}
+                className="px-2 py-1 text-xs bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors font-medium shadow-sm"
+              >
+                Cancel
+              </button>
+            ) }
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && editButton }
           </div>
         );
       case "in_progress":
         return (
           <div className="flex gap-2">
-            <button
-              onClick={() => moveTask(task.id, "completed")}
-              className="px-2 py-1 text-xs bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors font-medium shadow-sm"
-            >
-              Complete
-            </button>
-            <button
-              onClick={() => moveTask(task.id, "not_started")}
-              className="px-2 py-1 text-xs bg-gray-500 text-white rounded-full hover:bg-gray-600 transition-colors font-medium shadow-sm"
-            >
-              Back
-            </button>
-            {editButton}
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
+              <button
+                onClick={() => moveTask(task.id, "completed")}
+                className="px-2 py-1 text-xs bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors font-medium shadow-sm"
+              >
+                Complete
+              </button>
+            ) }
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
+              <button
+                onClick={() => moveTask(task.id, "not_started")}
+                className="px-2 py-1 text-xs bg-gray-500 text-white rounded-full hover:bg-gray-600 transition-colors font-medium shadow-sm"
+              >
+                Back
+              </button>
+            ) }
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && editButton }
           </div>
         );
       case "completed":
         return (
           <div className="flex gap-2">
-            <button
-              onClick={() => moveTask(task.id, "in_progress")}
-              className="px-2 py-1 text-xs bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors font-medium shadow-sm"
-            >
-              Reopen
-            </button>
-            <button
-              onClick={() => handleDelete(task.id)}
-              className="px-2 py-1 text-xs bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors font-medium shadow-sm"
-            >
-              Delete
-            </button>
-            {editButton}
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
+              <button
+                onClick={() => moveTask(task.id, "in_progress")}
+                className="px-2 py-1 text-xs bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors font-medium shadow-sm"
+              >
+                Reopen
+              </button>
+            ) }
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
+              <button
+                onClick={() => handleDelete(task.id)}
+                className="px-2 py-1 text-xs bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors font-medium shadow-sm"
+              >
+                Delete
+              </button>
+            ) }
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && editButton }
           </div>
         );
       case "cancelled":
         return (
           <div className="flex gap-2">
-            <button
-              onClick={() => moveTask(task.id, "not_started")}
-              className="px-2 py-1 text-xs bg-gray-500 text-white rounded-full hover:bg-gray-600 transition-colors font-medium shadow-sm"
-            >
-              Restore
-            </button>
-            <button
-              onClick={() => handleDelete(task.id)}
-              className="px-2 py-1 text-xs bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors font-medium shadow-sm"
-            >
-              Delete
-            </button>
-            {editButton}
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
+              <button
+                onClick={() => moveTask(task.id, "not_started")}
+                className="px-2 py-1 text-xs bg-gray-500 text-white rounded-full hover:bg-gray-600 transition-colors font-medium shadow-sm"
+              >
+                Restore
+              </button>
+            ) }
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
+              <button
+                onClick={() => handleDelete(task.id)}
+                className="px-2 py-1 text-xs bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors font-medium shadow-sm"
+              >
+                Delete
+              </button>
+            ) }
+            { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && editButton }
           </div>
         );
       default:
@@ -447,8 +464,8 @@ const TaskCard = ({ task, getRoleDisplay, getRoleColor, handleDelete, moveTask, 
         </div>
       )}
       <div className="flex items-center justify-between mt-1">
-        {getActionButtons(task.status, task, onEditTask)}
-        {task.dueDate && (() => {
+        {getActionButtons(task.status, task, onEditTask, user)}
+        {task.dueDate && task.status !== "completed" && (() => {
           const due = parseDate(task.dueDate);
           if (!due) return null;
           const today = new Date();
@@ -545,6 +562,7 @@ const CalendarView = ({
   onEditTask,
   currentDate,
   onDateChange,
+  user,
 }) => {
   const [selectedDate, setSelectedDate] = useState(null);
 
@@ -709,6 +727,7 @@ const CalendarView = ({
                 onImageDelete={onImageDelete}
                 onEditTask={onEditTask}
                 isDraggable={false}
+                user={user}
               />
             ))}
             {getTasksForDate(selectedDate).length === 0 && (
@@ -728,6 +747,7 @@ const TableView = ({
   handleDelete,
   moveTask,
   onEditTask,
+  user,
 }) => {
   const getStatusBadge = (status) => {
     switch (status) {
@@ -849,15 +869,17 @@ const TableView = ({
                 </td>
                 <td className="px-2 py-4">
                   <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => onEditTask(task)}
-                      className="px-2 py-1 text-xs text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 transition-colors font-semibold shadow-sm"
-                    >
-                      Edit
-                    </button>
+                    { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
+                      <button
+                        onClick={() => onEditTask(task)}
+                        className="px-2 py-1 text-xs text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 transition-colors font-semibold shadow-sm"
+                      >
+                        Edit
+                      </button>
+                    ) }
 
                     {/* Status change buttons */}
-                    {task.status === "not_started" && (
+                    {task.status === "not_started" && (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
                       <button
                         onClick={() => moveTask(task.id, "in_progress")}
                         className="px-2 py-1 text-xs bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors font-semibold shadow-sm"
@@ -865,7 +887,7 @@ const TableView = ({
                         Start
                       </button>
                     )}
-                    {task.status === "in_progress" && (
+                    {task.status === "in_progress" && (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
                       <button
                         onClick={() => moveTask(task.id, "completed")}
                         className="px-2 py-1 text-xs bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors font-semibold shadow-sm"
@@ -874,7 +896,7 @@ const TableView = ({
                       </button>
                     )}
                     {(task.status === "completed" ||
-                      task.status === "cancelled") && (
+                      task.status === "cancelled") && (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
                       <button
                         onClick={() => moveTask(task.id, "in_progress")}
                         className="px-2 py-1 text-xs bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors font-semibold shadow-sm"
@@ -883,12 +905,14 @@ const TableView = ({
                       </button>
                     )}
 
-                    <button
-                      onClick={() => handleDelete(task.id)}
-                      className="px-2 py-1 text-xs bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors font-semibold shadow-sm"
-                    >
-                      Delete
-                    </button>
+                    { (task.assignedTo === user?.displayName || ["Director", "Head", "Admin"].includes(user?.role)) && (
+                      <button
+                        onClick={() => handleDelete(task.id)}
+                        className="px-2 py-1 text-xs bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors font-semibold shadow-sm"
+                      >
+                        Delete
+                      </button>
+                    ) }
                   </div>
                 </td>
               </tr>
@@ -913,6 +937,88 @@ const TableView = ({
   );
 };
 
+const LogsView = ({ logs, loading, confirmed, onConfirm }) => {
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div className="p-4">
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="h-4 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Task Delete Logs</h3>
+        {!confirmed ? (
+          <div className="text-center py-8">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6 max-w-md mx-auto">
+              <div className="flex items-center justify-center mb-4">
+                <FiAlertCircle className="w-8 h-8 text-amber-600 mr-3" />
+                <h4 className="text-lg font-semibold text-amber-800">System Performance Notice</h4>
+              </div>
+              <p className="text-sm text-amber-700 mb-4">
+                This section contains a large number of audit records. Loading may impact performance and incur database charges.
+              </p>
+              <p className="text-sm text-gray-600 mb-6">
+                Proceed only for compliance or administrative review.
+              </p>
+              <button
+                onClick={onConfirm}
+                className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium"
+              >
+                Load Audit Logs
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {logs.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No logs found</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-2 px-2 font-medium text-gray-700">Action</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-700">Task</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-700">Assigned To</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-700">Deleted By</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-700">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.map((log) => (
+                      <tr key={log.id} className="border-b border-gray-100">
+                        <td className="py-2 px-2 text-gray-900">{log.action}</td>
+                        <td className="py-2 px-2 text-gray-900">{log.entityName || log.additionalData?.title || log.additionalData?.description || 'Unknown'}</td>
+                        <td className="py-2 px-2 text-gray-900">{log.additionalData?.assignedTo || 'Unknown'}</td>
+                        <td className="py-2 px-2 text-gray-900">{log.userName}</td>
+                        <td className="py-2 px-2 text-gray-500">
+                          {log.timestamp instanceof Date ? log.timestamp.toLocaleString() : 'Invalid Date'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const TaskManager = ({ onBack }) => {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState("");
@@ -925,14 +1031,18 @@ const TaskManager = ({ onBack }) => {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [currentView, setCurrentView] = useState("kanban"); // "kanban", "calendar", or "table"
+  const [currentView, setCurrentView] = useState("kanban"); // "kanban", "calendar", "table", or "logs"
+  const [logsConfirmed, setLogsConfirmed] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [formError, setFormError] = useState("");
   const [assignees, setAssignees] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [logs, setLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { user } = useAuth();
   const [filters, setFilters] = useState({
     user:
@@ -954,7 +1064,7 @@ const TaskManager = ({ onBack }) => {
   const [countdown, setCountdown] = useState(0);
   const [noMoreCount, setNoMoreCount] = useState(0);
   const [noMoreTasks, setNoMoreTasks] = useState(false);
-  const [showNoMorePopup, showImportModal, setShowNoMorePopup] = useState(false);
+  const [setShowNoMorePopup] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(() => {
     const now = new Date();
     const day = now.getDay();
@@ -1043,8 +1153,7 @@ const TaskManager = ({ onBack }) => {
         userName &&
         parsedAssignees.includes(userName) &&
         user?.role !== "Director" &&
-        user?.role !== "Head" &&
-        user?.role !== "Admin"
+        user?.role !== "Head"
       ) {
         setFilters((prev) => ({ ...prev, user: userName }));
       }
@@ -1052,21 +1161,24 @@ const TaskManager = ({ onBack }) => {
 
     // Set up limited real-time listener for tasks
     const calendarLimit = currentView === "calendar" ? 500 : currentLimit;
-    let tasksQuery;
-    if (user?.role === "Director" || user?.role === "Head" || user?.role === "Admin") {
-      tasksQuery = query(
-        collection(db, "marketing_tasks"),
+    
+    let qConstraints = [
+      orderBy("createdAt", "desc"),
+      limit(calendarLimit)
+    ];
+
+    if (filters.user) {
+      qConstraints = [
+        where("assignedTo", "==", filters.user),
         orderBy("createdAt", "desc"),
-        limit(calendarLimit),
-      );
-    } else {
-      tasksQuery = query(
-        collection(db, "marketing_tasks"),
-        where("userId", "==", user?.uid),
-        orderBy("createdAt", "desc"),
-        limit(calendarLimit),
-      );
+        limit(calendarLimit)
+      ];
     }
+
+    const tasksQuery = query(
+      collection(db, "marketing_tasks"),
+      ...qConstraints
+    );
     const unsubscribeTasks = onSnapshot(
       tasksQuery,
       (snapshot) => {
@@ -1159,25 +1271,8 @@ const TaskManager = ({ onBack }) => {
               setButtonDisabled(true);
               setCountdown(10);
             }
-          } else {
-             // New tasks count is 0 AND we haven't reached the limit.
-             // This means we have fetched all available tasks.
-             if (loadMoreTimeoutRef.current) {
-              clearTimeout(loadMoreTimeoutRef.current);
-              loadMoreTimeoutRef.current = null;
-            }
-            setLoadingMore(false);
-            setNoMoreTasks(true);
-            setToastMessage("All available tasks have been loaded.");
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 3000);
           }
         }
-      },
-      (error) => {
-        console.error("Error loading tasks from Firestore:", error);
-        setTasks([]);
-        setIsLoading(false);
         if (loadingMore) {
           // Clear the timeout on error
           if (loadMoreTimeoutRef.current) {
@@ -1214,8 +1309,7 @@ const TaskManager = ({ onBack }) => {
           userName &&
           dmUsers.includes(userName) &&
           user?.role !== "Director" &&
-          user?.role !== "Head" &&
-          user?.role !== "Admin"
+          user?.role !== "Head"
         ) {
           setFilters((prev) => ({ ...prev, user: userName }));
         }
@@ -1232,6 +1326,35 @@ const TaskManager = ({ onBack }) => {
       unsubscribeTasks();
     };
   }, [user?.uid, user?.displayName, refreshTrigger, currentLimit, currentView, filters.user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (currentView === "logs" && logsConfirmed) {
+      const fetchLogs = async () => {
+        setLogsLoading(true);
+        try {
+          const logsQuery = query(
+            collection(db, "marketing_audit_logs"),
+            where("action", "==", "Task Deleted"),
+            orderBy("timestamp", "desc"),
+            limit(100)
+          );
+          const logsSnapshot = await getDocs(logsQuery);
+          const logsData = logsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            timestamp: doc.data().timestamp?.toDate?.() || new Date(doc.data().timestamp)
+          }));
+          setLogs(logsData);
+        } catch (error) {
+          console.error("Error fetching logs:", error);
+          setLogs([]);
+        } finally {
+          setLogsLoading(false);
+        }
+      };
+      fetchLogs();
+    }
+  }, [currentView, logsConfirmed]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -1459,6 +1582,12 @@ const TaskManager = ({ onBack }) => {
   };
 
   const moveTask = async (taskId, newStatus) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    if (task.assignedTo !== user?.displayName && !["Director", "Head", "Admin"].includes(user?.role)) {
+      alert("You can only change the status of your own tasks.");
+      return;
+    }
     // Update local state immediately
     setTasks(
       tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)),
@@ -1538,11 +1667,20 @@ const TaskManager = ({ onBack }) => {
   });
 
   const handleEditTask = (task) => {
+    if (task.assignedTo !== user?.displayName && !["Director", "Head", "Admin"].includes(user?.role)) {
+      alert("You can only edit your own tasks.");
+      return;
+    }
     setEditingTask(task);
     setShowEditModal(true);
   };
 
   const handleSaveTaskDates = async (taskId, taskData) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || (task.assignedTo !== user?.displayName && !["Director", "Head", "Admin"].includes(user?.role))) {
+      alert("You can only edit your own tasks.");
+      return;
+    }
     try {
       await updateDoc(doc(db, "marketing_tasks", taskId), taskData);
       setTasks(tasks.map((t) => (t.id === taskId ? { ...t, ...taskData } : t)));
@@ -1556,6 +1694,21 @@ const TaskManager = ({ onBack }) => {
   };
 
   const handleDelete = async (id) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    if (task.assignedTo !== user?.displayName && !["Director", "Head", "Admin"].includes(user?.role)) {
+      alert("You can only delete your own tasks.");
+      return;
+    }
+    // Log the deletion
+    await logMarketingActivity("Task Deleted", {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      assignedTo: task.assignedTo,
+      status: task.status,
+      role: task.role
+    });
     // Update local state immediately
     setTasks(tasks.filter((t) => t.id !== id));
     // Update Firestore immediately
@@ -1604,6 +1757,29 @@ const TaskManager = ({ onBack }) => {
         return "bg-pink-100 text-pink-800 border border-pink-200";
       default:
         return "bg-gray-100 text-gray-800 border border-gray-200";
+    }
+  };
+
+  const logMarketingActivity = async (action, entityData = {}) => {
+    try {
+      const auditLog = {
+        timestamp: serverTimestamp(),
+        userId: user?.uid,
+        userName: user?.displayName || user?.email || "Unknown User",
+        userEmail: user?.email,
+        action: action,
+        module: "Marketing Dashboard",
+        entityType: "task",
+        entityId: entityData.id,
+        entityName: entityData.title || entityData.description,
+        riskLevel: "Low",
+        success: true,
+        additionalData: entityData
+      };
+
+      await addDoc(collection(db, "marketing_audit_logs"), auditLog);
+    } catch (error) {
+      console.error("Failed to log marketing activity:", error);
     }
   };
 
@@ -1667,9 +1843,11 @@ const TaskManager = ({ onBack }) => {
                 <KanbanSkeleton />
               ) : currentView === "calendar" ? (
                 <CalendarSkeleton />
-              ) : (
+              ) : currentView === "table" ? (
                 <TableSkeleton />
-              )}
+              ) : currentView === "logs" ? (
+                <TableSkeleton />
+              ) : null}
             </>
           ) : (
             <>
@@ -1721,11 +1899,37 @@ const TaskManager = ({ onBack }) => {
                       >
                         Table
                       </button>
+                      {user?.department === "Admin" && (
+                        <button
+                          onClick={() => {
+                            setCurrentView("logs");
+                            setLogsConfirmed(false);
+                          }}
+                          className={`px-2 py-1 text-xs font-medium rounded-xl transition-colors ${
+                            currentView === "logs"
+                              ? "bg-blue-500 text-white shadow-sm"
+                              : "text-gray-600 hover:bg-gray-100"
+                          }`}
+                        >
+                          Logs
+                        </button>
+                      )}
                     </div>
                     <button
-                      onClick={() => setRefreshTrigger((prev) => prev + 1)}
-                      className="px-3 py-1.5 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors text-xs font-medium shadow-sm"
+                      onClick={() => {
+                        setIsRefreshing(true);
+                        setRefreshTrigger((prev) => prev + 1);
+                        // Reset refreshing state after animation completes
+                        setTimeout(() => setIsRefreshing(false), 800);
+                      }}
+                      disabled={isRefreshing}
+                      className={`px-3 py-1.5 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all duration-300 text-xs font-medium shadow-sm flex items-center gap-1 ${
+                        isRefreshing ? 'shadow-md' : ''
+                      }`}
                     >
+                      <FiRefreshCw className={`w-3 h-3 transition-transform duration-500 ease-in-out ${
+                        isRefreshing ? 'rotate-180' : 'hover:rotate-90'
+                      }`} />
                       Refresh
                     </button>
                     <button
@@ -1747,142 +1951,144 @@ const TaskManager = ({ onBack }) => {
                 </div>
 
                 {/* Filters */}
-                <div className="mb-2 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      Filters:
-                    </span>
-                    <select
-                      value={filters.user}
-                      onChange={(e) => {
-                        const newValue = e.target.value;
-                        setFilters((prev) => ({ ...prev, user: newValue }));
-                        // Save preference: 'all' if empty, 'user' if specific user
-                        localStorage.setItem(
-                          "dmFilterPreference",
-                          newValue === "" ? "all" : "user",
-                        );
-                      }}
-                      className="px-2 py-1 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">All Users</option>
-                      {assignees.map((assignee) => (
-                        <option key={assignee} value={assignee}>
-                          {assignee}
-                        </option>
-                      ))}
-                    </select>
-                    {currentView === "calendar" ? (
-                      <>
-                        <button
-                          onClick={goToPreviousMonth}
-                          className="px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-100 flex items-center"
-                        >
-                          <FiChevronLeft />
-                        </button>
-                        <span className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded-lg">
-                          {calendarCurrentDate.toLocaleDateString("en-US", {
-                            month: "long",
-                            year: "numeric",
-                          })}
-                        </span>
-                        <button
-                          onClick={goToNextMonth}
-                          className="px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-100 flex items-center"
-                        >
-                          <FiChevronRight />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={goToPreviousWeek}
-                          className="px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-100 flex items-center"
-                        >
-                          <FiChevronLeft />
-                        </button>
-                        <span className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded-lg">
-                          {formatWeekRange(currentWeek)}
-                        </span>
-                        <button
-                          onClick={goToNextWeek}
-                          className="px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-100 flex items-center"
-                        >
-                          <FiChevronRight />
-                        </button>
-                      </>
-                    )}
-                    <select
-                      value={filters.role}
-                      onChange={(e) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          role: e.target.value,
-                        }))
-                      }
-                      className="px-2 py-1 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">All Roles</option>
-                      <option value="Video Editor">Video Editor</option>
-                      <option value="Graphic Designer">Graphic Designer</option>
-                      <option value="Manager">Manager</option>
-                      <option value="Developer">Developer</option>
-                      <option value="Content Writer">Content Writer</option>
-                    </select>
-                    <button
-                      onClick={() =>
-                        setFilters({
-                          user: "",
-                          startDate: "",
-                          endDate: "",
-                          role: "",
-                        })
-                      }
-                      disabled={filters.user === "" && filters.role === ""}
-                      className={`px-2 py-1 text-xs rounded-lg transition-colors ${
-                        filters.user === "" && filters.role === ""
-                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                          : "bg-gray-500 text-white hover:bg-gray-600"
-                      }`}
-                    >
-                      Clear Filters
-                    </button>
-
-                    {/* Task Count Display */}
-                    <div className="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg font-medium">
-                      {filteredTasks.length} tasks
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        if (!buttonDisabled && !noMoreTasks) {
-                          setLoadingMore(true);
-                          setCurrentLimit((prev) => prev + 100);
-                          // Set timeout to show "no more tasks" popup after 5 seconds if no tasks loaded
-                          loadMoreTimeoutRef.current = setTimeout(() => {
-                            if (loadingMore) {
-                              setLoadingMore(false);
-                              setShowNoMorePopup(true);
-                              setNoMoreTasks(true);
-                            }
-                          }, 5000);
+                {currentView !== "logs" && (
+                  <div className="mb-2 bg-white rounded-xl p-2 shadow-sm border border-gray-200">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Filters:
+                      </span>
+                      <select
+                        value={filters.user}
+                        onChange={(e) => {
+                          const newValue = e.target.value;
+                          setFilters((prev) => ({ ...prev, user: newValue }));
+                          // Save preference: 'all' if empty, 'user' if specific user
+                          localStorage.setItem(
+                            "dmFilterPreference",
+                            newValue === "" ? "all" : "user",
+                          );
+                        }}
+                        className="px-2 py-1 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">All Users</option>
+                        {assignees.map((assignee) => (
+                          <option key={assignee} value={assignee}>
+                            {assignee}
+                          </option>
+                        ))}
+                      </select>
+                      {currentView === "calendar" ? (
+                        <>
+                          <button
+                            onClick={goToPreviousMonth}
+                            className="px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-100 flex items-center"
+                          >
+                            <FiChevronLeft />
+                          </button>
+                          <span className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded-lg">
+                            {calendarCurrentDate.toLocaleDateString("en-US", {
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </span>
+                          <button
+                            onClick={goToNextMonth}
+                            className="px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-100 flex items-center"
+                          >
+                            <FiChevronRight />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={goToPreviousWeek}
+                            className="px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-100 flex items-center"
+                          >
+                            <FiChevronLeft />
+                          </button>
+                          <span className="px-2 py-1 text-xs bg-gray-100 border border-gray-300 rounded-lg">
+                            {formatWeekRange(currentWeek)}
+                          </span>
+                          <button
+                            onClick={goToNextWeek}
+                            className="px-2 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-100 flex items-center"
+                          >
+                            <FiChevronRight />
+                          </button>
+                        </>
+                      )}
+                      <select
+                        value={filters.role}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            role: e.target.value,
+                          }))
                         }
-                      }}
-                      disabled={buttonDisabled || noMoreTasks}
-                      className={`px-2 py-1 text-xs rounded-lg transition-colors ${
-                        buttonDisabled || noMoreTasks
-                          ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-                          : "bg-blue-500 text-white hover:bg-blue-600"
-                      }`}
-                    >
-                      {noMoreTasks
-                        ? "No More Tasks"
-                        : buttonDisabled
-                          ? `Load More Tasks :${countdown}`
-                          : "Load More Tasks"}
-                    </button>
+                        className="px-2 py-1 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">All Roles</option>
+                        <option value="Video Editor">Video Editor</option>
+                        <option value="Graphic Designer">Graphic Designer</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Developer">Developer</option>
+                        <option value="Content Writer">Content Writer</option>
+                      </select>
+                      <button
+                        onClick={() =>
+                          setFilters({
+                            user: "",
+                            startDate: "",
+                            endDate: "",
+                            role: "",
+                          })
+                        }
+                        disabled={filters.user === "" && filters.role === ""}
+                        className={`px-2 py-1 text-xs rounded-lg transition-colors ${
+                          filters.user === "" && filters.role === ""
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "bg-gray-500 text-white hover:bg-gray-600"
+                        }`}
+                      >
+                        Clear Filters
+                      </button>
+
+                      {/* Task Count Display */}
+                      <div className="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg font-medium">
+                        {filteredTasks.length} tasks
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (!buttonDisabled && !noMoreTasks) {
+                            setLoadingMore(true);
+                            setCurrentLimit((prev) => prev + 100);
+                            // Set timeout to show "no more tasks" popup after 5 seconds if no tasks loaded
+                            loadMoreTimeoutRef.current = setTimeout(() => {
+                              if (loadingMore) {
+                                setLoadingMore(false);
+                                setShowNoMorePopup(true);
+                                setNoMoreTasks(true);
+                              }
+                            }, 5000);
+                          }
+                        }}
+                        disabled={buttonDisabled || noMoreTasks}
+                        className={`px-2 py-1 text-xs rounded-lg transition-colors ${
+                          buttonDisabled || noMoreTasks
+                            ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                            : "bg-blue-500 text-white hover:bg-blue-600"
+                        }`}
+                      >
+                        {noMoreTasks
+                          ? "No More Tasks"
+                          : buttonDisabled
+                            ? `Load More Tasks :${countdown}`
+                            : "Load More Tasks"}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Task Creation Form - Now a Modal */}
                 {showForm && (
@@ -2093,6 +2299,7 @@ const TaskManager = ({ onBack }) => {
                           moveTask={moveTask}
                           onImageDelete={handleImageDelete}
                           onEditTask={handleEditTask}
+                          user={user}
                         />
                       ))}
                     </Column>
@@ -2114,6 +2321,7 @@ const TaskManager = ({ onBack }) => {
                           moveTask={moveTask}
                           onImageDelete={handleImageDelete}
                           onEditTask={handleEditTask}
+                          user={user}
                         />
                       ))}
                     </Column>
@@ -2135,6 +2343,7 @@ const TaskManager = ({ onBack }) => {
                           moveTask={moveTask}
                           onImageDelete={handleImageDelete}
                           onEditTask={handleEditTask}
+                          user={user}
                         />
                       ))}
                     </Column>
@@ -2156,6 +2365,7 @@ const TaskManager = ({ onBack }) => {
                           moveTask={moveTask}
                           onImageDelete={handleImageDelete}
                           onEditTask={handleEditTask}
+                          user={user}
                         />
                       ))}
                     </Column>
@@ -2175,8 +2385,9 @@ const TaskManager = ({ onBack }) => {
                     if (direction === 1) goToNextMonth();
                     else goToPreviousMonth();
                   }}
+                  user={user}
                 />
-              ) : (
+              ) : currentView === "table" ? (
                 <TableView
                   tasks={filteredTasks}
                   getRoleDisplay={getRoleDisplay}
@@ -2184,8 +2395,11 @@ const TaskManager = ({ onBack }) => {
                   handleDelete={handleDelete}
                   moveTask={moveTask}
                   onEditTask={handleEditTask}
+                  user={user}
                 />
-              )}
+              ) : currentView === "logs" ? (
+                <LogsView logs={logs} loading={logsLoading} confirmed={logsConfirmed} onConfirm={() => setLogsConfirmed(true)} />
+              ) : null}
             </>
           )}
         </div>
@@ -2200,6 +2414,7 @@ const TaskManager = ({ onBack }) => {
               moveTask={moveTask}
               onImageDelete={handleImageDelete}
               onEditTask={handleEditTask}
+              user={user}
             />
           ) : null}
         </DragOverlay>
